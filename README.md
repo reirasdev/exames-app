@@ -31,14 +31,20 @@ Um sistema web completo para processamento de exames de sangue em PDF, que extra
 ## Instruções de Uso
 
 ### Execução com Docker Compose
-1. docker compose down
-
-2. docker compose build --no-cache
-
-3. docker compose up -d
+1. ```
+   docker compose down
+   ```
+2. ```   
+   docker compose build --no-cache
+   ```
+3. ```
+   docker compose up -d
+   ```
 
    ### Para acompanhar os logs
-   1.  docker compose logs -f
+   1. ```
+      docker compose logs -f
+      ```
 
 
 ### Execução com Docker
