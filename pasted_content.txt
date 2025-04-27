@@ -1,0 +1,100 @@
+Crie um sistema web completo com upload de arquivos PDF contendo laudos de exames de sangue.
+O sistema deve extrair os nomes dos exames e seus valores numéricos, associar cada conjunto de exames à sua data de coleta, e gerar uma planilha Excel no formato de série temporal (linhas = datas, colunas = tipos de exame).
+
+Estou anexando um modelo de pdf do qual pretendo extrair os dados como exemplo.
+Abaixo enviarei as especificações em blocos: 
+
+---
+Bloco 1 – Estrutura base do projeto (React + Python + Docker)
+Crie a estrutura base de um sistema com front-end em React e back-end em Python (FastAPI ou Flask). O objetivo é permitir o upload de arquivos PDF e gerar um arquivo Excel como saída.
+
+Requisitos:
+- Estrutura de diretórios separando frontend e backend
+- Backend em Python (FastAPI preferencialmente)
+- Frontend em React (sem frameworks adicionais)
+- Dockerfile para containerizar o projeto
+- Compatível com deploy no Heroku (usar `Procfile` se necessário)
+- Arquivo README.md com instruções básicas de uso
+
+Organize os arquivos da seguinte forma:
+/frontend
+/backend
+/data
+Dockerfile
+README.md
+
+---
+Bloco 2 – Front-end: upload, visualização e download
+Implemente o front-end usando React com as seguintes funcionalidades:
+
+- Componente de upload para múltiplos arquivos PDF
+- Botão para enviar os arquivos ao backend via API
+- Exibir os dados extraídos em uma tabela HTML
+- Botão para download da planilha Excel gerada pelo servidor
+
+Use apenas React puro (sem Next.js ou frameworks). Organize os componentes e permita fácil integração com o endpoint POST /upload da API.
+
+---
+Bloco 3 – Back-end: API de upload e processamento de PDF
+Crie uma API em FastAPI com um endpoint:
+
+POST /upload
+- Recebe múltiplos arquivos PDF
+- Para cada PDF:
+    - Extrai a data do exame a partir do campo: DATA COLETA/RECEBIMENTO: DD/MM/AAAA HH:MM
+    - Extrai os exames e seus valores numéricos (ignorar intervalos de referência)
+    - Normaliza o nome dos exames (sem acento, minúsculo, sem espaços duplicados)
+- Os resultados devem ser agregados em um DataFrame (pandas)
+- Gera uma planilha Excel onde cada linha é uma data de coleta e cada coluna é um exame
+- Retorna o arquivo Excel (.xlsx) como resposta para download
+
+O arquivo .xlsx deve ter a seguinte estrutura:
+
+| Data da Coleta | Hemoglobina | Hematócrito | Eritrócitos | Ferro | Creatinina | ... |
+|----------------|-------------|-------------|-------------|-------|------------|-----|
+| 11/04/2025     | 13,5        | 38,4        | 4,62        | 132   | 0,92       | ... |
+| 21/02/2025     | 14,0        | 40,1        | 4,80        | 125   | 0,89       | ... |
+
+- Uma linha por laudo (por data).
+- Uma coluna por tipo de exame.
+- Células vazias quando um exame estiver ausente na data.
+- A planilha deve poder ser baixada via botão no front-end.
+
+Use pdfplumber ou PyMuPDF para extração de texto.
+
+---
+Bloco 4 – Geração da planilha Excel (formato série temporal)
+Crie uma função Python que recebe uma lista de dicionários com a seguinte estrutura:
+
+[
+  {
+    "data_coleta": "11/04/2025",
+    "exames": {
+      "Hemoglobina": 13.5,
+      "Hematócrito": 38.4,
+      ...
+    }
+  },
+  ...
+]
+
+A função deve gerar um DataFrame pandas onde:
+- Cada linha representa uma data de coleta
+- Cada coluna representa um tipo de exame
+- Células sem valor devem ficar em branco
+
+Salve o arquivo como 'exames.xlsx' usando pandas + openpyxl.
+
+---
+Bloco 5 – Docker e deploy no Heroku
+Crie um Dockerfile para o back-end Python (FastAPI) e um Procfile para deploy no Heroku.
+
+Requisitos:
+- App rodando em 0.0.0.0:$PORT
+- Dockerfile funcional com pipenv ou requirements.txt
+- Procfile com: web: uvicorn main:app --host=0.0.0.0 --port=${PORT}
+- Exporte o front-end como estático (opcional) ou trate frontend e backend como apps distintos
+
+Inclua instruções de build no README:
+- docker build -t exames-app .
+- docker run -p 8000:8000 exames-app

@@ -1,0 +1,67 @@
+# Estágio de build para o frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Estágio final com Python e Nginx
+FROM python:3.10-slim
+
+# Instalar Nginx
+RUN apt-get update && apt-get install -y nginx && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copiar arquivos do frontend
+COPY --from=frontend-build /app/frontend/dist /var/www/html
+
+# Copiar código do backend
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/*.py .
+
+# Criar diretório para dados
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Configurar Nginx
+RUN echo 'server {\n\
+    listen 80;\n\
+    server_name localhost;\n\
+\n\
+    # Servir arquivos estáticos do frontend\n\
+    location / {\n\
+        root /var/www/html;\n\
+        index index.html;\n\
+        try_files $uri $uri/ /index.html;\n\
+    }\n\
+\n\
+    # Encaminhar solicitações de API para o backend\n\
+    location /api/ {\n\
+        proxy_pass http://localhost:8000/;\n\
+        proxy_set_header Host $host;\n\
+        proxy_set_header X-Real-IP $remote_addr;\n\
+    }\n\
+\n\
+    # Encaminhar solicitações de upload diretamente para o endpoint de upload\n\
+    location /upload {\n\
+        proxy_pass http://localhost:8000/upload;\n\
+        proxy_set_header Host $host;\n\
+        proxy_set_header X-Real-IP $remote_addr;\n\
+        client_max_body_size 20M;\n\
+    }\n\
+}' > /etc/nginx/sites-available/default
+
+# Criar script de inicialização
+RUN echo '#!/bin/bash\n\
+# Iniciar o backend em segundo plano\n\
+cd /app && python -m uvicorn main:app --host 0.0.0.0 --port 8000 &\n\
+\n\
+# Iniciar o Nginx em primeiro plano\n\
+nginx -g "daemon off;"\n' > /start.sh
+
+RUN chmod +x /start.sh
+
+EXPOSE 80
+
+CMD ["/start.sh"]
